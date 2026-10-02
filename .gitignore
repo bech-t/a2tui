@@ -1,0 +1,8 @@
+build/*
+!build/*.dsk
+tools/ac/ac.jar
+*:Zone.Identifier
+spec.md
+history/
+
+
