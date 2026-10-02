@@ -130,51 +130,9 @@ l'appelant (qui, s'il veut un menu, lie déjà `menu.o` pour cette raison).
 
 ## Mesures (cc65 2.19, `-O -Os`)
 
-> **À refaire à chaque révision** : `tools/measure.sh` produit ces chiffres
-> (il compile dans un dossier temporaire, sans toucher à `build/`). Reporter
-> les résultats ici, dans `usage.en.md` et dans la section « Éditeur ».
-
-Taille des modules de la bibliothèque, en octets (le segment `LC` est la RAM de
-la carte langage) :
-
-| Module | CODE | RODATA | BSS | LC |
-| --- | --- | --- | --- | --- |
-| app | 1334 | 5 | 49 | 0 |
-| busy | 737 | 5 | 109 | 0 |
-| button | 520 | 4 | 0 | 0 |
-| checkbox | 406 | 4 | 0 | 0 |
-| dialog | 0 | 49 | 417 | 1232 |
-| event | 138 | 0 | 0 | 0 |
-| filesel | 0 | 53 | 677 | 1832 |
-| input | 1492 | 4 | 0 | 0 |
-| keyboard | 58 | 0 | 0 | 0 |
-| label | 203 | 4 | 0 | 0 |
-| lang | 754 | 0 | 100 | 0 |
-| list | 1423 | 4 | 0 | 0 |
-| menu | 3233 | 14 | 300 | 0 |
-| mouse | 424 | 12 | 4 | 0 |
-| progress | 383 | 4 | 0 | 0 |
-| radio | 768 | 4 | 0 | 0 |
-| screen | 2852 | 30 | 2053 | 0 |
-| screen_a | 178 | 0 | 0 | 0 |
-| tview | 2305 | 0 | 0 | 0 |
-| window | 750 | 4 | 0 | 0 |
-| **Total** | **17958** | **200** | **3709** | **3064** |
-
-Le total est un maximum : une application ne lie que les modules qu'elle
-référence (voir « Granularité du lien »). `screen` contient le tampon virtuel
-de l'écran (1 920 octets de BSS pour 80×24).
-
-Programmes complets :
-
-| Programme | Occupation de la RAM principale | `LC` |
-| --- | --- | --- |
-| Démo | `$0C00`–`$7116` (≈ 25,3 Ko) | 1 232 octets |
-| Éditeur | `$0C00`–`$A1D9` (≈ 37,5 Ko) | 3 064 octets sur 3 072 |
-
-Tampon de texte de l'éditeur : 47 104 octets avec RAM auxiliaire ; sans elle,
-6 438 octets avec souris, 9 670 sans souris (`TUI_MOUSE=0`), 8 363 avec souris
-et sans le code auxiliaire (`EDIT_AUX=0`).
+Bibliothèque complète (tous les modules liés) : 17 958 octets de code, 200 de
+constantes, 3 709 de variables, et 3 064 en carte langage (`LC`). Une
+application ne lie que les modules qu'elle utilise.
 
 ## Limites connues (v1)
 

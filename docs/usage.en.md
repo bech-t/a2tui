@@ -135,50 +135,9 @@ it wants a menu, already links `menu.o` for that reason).
 
 ## Measurements (cc65 2.19, `-O -Os`)
 
-> **Redo at every revision**: `tools/measure.sh` produces these figures (it
-> builds in a temporary folder, without touching `build/`). Copy the results
-> here, into `usage.fr.md` and into the "Text editor" section.
-
-Size of the library modules, in bytes (the `LC` segment is language-card RAM):
-
-| Module | CODE | RODATA | BSS | LC |
-| --- | --- | --- | --- | --- |
-| app | 1334 | 5 | 49 | 0 |
-| busy | 737 | 5 | 109 | 0 |
-| button | 520 | 4 | 0 | 0 |
-| checkbox | 406 | 4 | 0 | 0 |
-| dialog | 0 | 49 | 417 | 1232 |
-| event | 138 | 0 | 0 | 0 |
-| filesel | 0 | 53 | 677 | 1832 |
-| input | 1492 | 4 | 0 | 0 |
-| keyboard | 58 | 0 | 0 | 0 |
-| label | 203 | 4 | 0 | 0 |
-| lang | 754 | 0 | 100 | 0 |
-| list | 1423 | 4 | 0 | 0 |
-| menu | 3233 | 14 | 300 | 0 |
-| mouse | 424 | 12 | 4 | 0 |
-| progress | 383 | 4 | 0 | 0 |
-| radio | 768 | 4 | 0 | 0 |
-| screen | 2852 | 30 | 2053 | 0 |
-| screen_a | 178 | 0 | 0 | 0 |
-| tview | 2305 | 0 | 0 | 0 |
-| window | 750 | 4 | 0 | 0 |
-| **Total** | **17958** | **200** | **3709** | **3064** |
-
-The total is a maximum: an application only links the modules it references
-(see "Link granularity"). `screen` holds the virtual screen buffer (1,920
-bytes of BSS for 80×24).
-
-Complete programs:
-
-| Program | Main RAM footprint | `LC` |
-| --- | --- | --- |
-| Demo | `$0C00`–`$7116` (≈ 25.3 KB) | 1,232 bytes |
-| Editor | `$0C00`–`$A1D9` (≈ 37.5 KB) | 3,064 bytes out of 3,072 |
-
-Editor text buffer: 47,104 bytes with auxiliary RAM; without it, 6,438 bytes
-with the mouse, 9,670 without the mouse (`TUI_MOUSE=0`), 8,363 with the
-mouse and without the auxiliary code (`EDIT_AUX=0`).
+Complete library (every module linked): 17,958 bytes of code, 200 of
+constants, 3,709 of variables, and 3,064 in the language card (`LC`). An
+application only links the modules it uses.
 
 ## Known limits (v1)
 
