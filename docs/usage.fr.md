@@ -41,6 +41,145 @@ int main(void) {
 Tout est statique (pas de `malloc`) : la structure est déclarée par l'appelant,
 `*_init()` la remplit. Voir `demo/demo.c` pour un exemple complet.
 
+## Construire une fenêtre
+
+Une fenêtre est un conteneur (`TWindow`) auquel on ajoute des widgets. Tout est
+déclaré en `static` par l'application ; chaque `*_init()` remplit la structure,
+`window_add()` l'ajoute à la fenêtre et `app_insert()` place la fenêtre sur le
+bureau.
+
+1. **Déclarer** la fenêtre et ses widgets.
+2. **Initialiser** : `window_init(&win, x, y, largeur, hauteur, titre, 0)`, puis
+   un `*_init()` par widget.
+3. **Ajouter** chaque widget avec `window_add(&win, &widget.v)` : l'ordre
+   d'ajout est l'ordre de focus (Tab passe au suivant).
+4. **Insérer** la fenêtre avec `app_insert(&win.g.v)`.
+5. **Réagir** : un bouton émet la commande qu'on lui a donnée ; on la traite
+   dans une fonction branchée par `app_set_handler()`.
+
+Coordonnées : celles de la fenêtre sont relatives au bureau (juste sous la
+barre de menu), celles des widgets au coin haut-gauche du cadre de la fenêtre
+(donc ≥ 1). La largeur et la hauteur de la fenêtre comprennent le cadre.
+
+![Fenêtre d'exemple](window-example.png)
+
+```c
+#include "a2tui.h"
+
+#define CM_APPLY (CM_USER + 0)
+
+static const char *const speeds[] = { "Slow", "Normal", "Fast" };
+static const char *const files[]  = { "README", "NOTES", "TODO" };
+
+static TWindow     win;
+static TLabel      lbl_name, lbl_speed, lbl_status;
+static TInputLine  in_name;
+static char        name[17];
+static TCheckBox   chk_log;
+static TRadioGroup radio;
+static TListBox    list;
+static TProgress   bar;
+static TButton     btn_apply, btn_quit;
+
+static u8 on_command(TEvent *ev)
+{
+    if (ev->cmd == CM_APPLY) {
+        progress_set(&bar, (u16)(radio.sel + 1));
+        label_set(&lbl_status, chk_log.checked ? "Log on" : "Log off");
+        return EVENT_HANDLED;
+    }
+    return EVENT_NOT_HANDLED;
+}
+
+int main(void)
+{
+    app_init();
+
+    window_init(&win, 2, 1, 34, 18, "Settings", 0);
+    label_init(&lbl_name, 2, 1, 0, "Name:");
+    input_init(&in_name, 8, 1, 20, name, 16);
+    checkbox_init(&chk_log, 2, 3, "Keep a log", 1);
+    label_init(&lbl_speed, 2, 5, 0, "Speed:");
+    radiogroup_init(&radio, 2, 6, 20, speeds, 3, 1);
+    list_init(&list, 2, 10, 28, 3, list_strings_get, (void *)files, 3, CM_NONE);
+    progress_init(&bar, 2, 14, 28, 3);
+    label_init(&lbl_status, 2, 15, 28, "");
+    button_init(&btn_apply, 2, 16, 10, "Apply", CM_APPLY);
+    button_init(&btn_quit, 16, 16, 10, "Quit", CM_QUIT);
+
+    window_add(&win, &lbl_name.v);
+    window_add(&win, &in_name.v);
+    window_add(&win, &chk_log.v);
+    window_add(&win, &lbl_speed.v);
+    window_add(&win, &radio.v);
+    window_add(&win, &list.v);
+    window_add(&win, &bar.v);
+    window_add(&win, &lbl_status.v);
+    window_add(&win, &btn_apply.v);
+    window_add(&win, &btn_quit.v);
+    app_insert(&win.g.v);
+
+    app_set_handler(on_command);
+    app_run();
+    app_done();
+    return 0;
+}
+```
+
+| Widget | Création | À lire ou à modifier |
+| --- | --- | --- |
+| `TLabel` | `label_init(&l, x, y, largeur, "texte")` (largeur 0 = celle du texte) | `label_set(&l, "autre")` |
+| `TInputLine` | `input_init(&in, x, y, largeur, tampon, max)` (tampon de `max + 1` octets) | `in.buf`, `input_set_text(&in, "...")` |
+| `TCheckBox` | `checkbox_init(&c, x, y, "texte", coche)` | `c.checked` |
+| `TRadioGroup` | `radiogroup_init(&r, x, y, largeur, libelles, n, choix)` | `r.sel`, `radiogroup_select()` |
+| `TListBox` | `list_init(&l, x, y, largeur, hauteur, get, ctx, n, cmd)` (`cmd` : émise sur Entrée) | `l.sel`, `list_set_count()`, `list_select()` |
+| `TProgress` | `progress_init(&p, x, y, largeur, max)` | `progress_set(&p, valeur)` |
+| `TButton` | `button_init(&b, x, y, largeur, "texte", cmd)` | |
+
+Pour une liste, `list_strings_get` lit un tableau de chaînes ; pour d'autres
+données, on fournit sa propre fonction `get(ctx, index)` qui renvoie le texte de
+la ligne.
+
+**Les commandes.** Les commandes de l'application commencent à `CM_USER`.
+Le gestionnaire reçoit celles que personne n'a consommées et renvoie
+`EVENT_HANDLED` pour les arrêter. Il ne faut pas renvoyer `EVENT_HANDLED` pour
+`CM_QUIT` sans raison : c'est elle qui termine `app_run()`.
+
+**Un dialogue modal** s'ouvre par-dessus et bloque jusqu'à sa fermeture. Deux
+façons de le construire :
+
+```c
+/* 1. Une fenêtre WF_MODAL, construite comme ci-dessus, exécutée par app_exec() */
+window_init(&dlg, 0, 0, 30, 8, "Rename", WF_MODAL);
+window_center(&dlg);
+/* ... widgets, puis : */
+window_set_default(&dlg, CM_OK);      /* commande émise par Entrée */
+if (app_exec(&dlg) == CM_OK) { /* validé */ }
+
+/* 2. Une table de description (un seul jeu de widgets partagé par tous les dialogues) */
+static char buf[17];
+static const TDlgItem items[] = {
+    { DI_LABEL,  2, 1,  0, "New name:", 0 },
+    { DI_INPUT,  2, 2, 16, buf, 16 },
+    { DI_BUTTON, 2, 4,  8, "OK", CM_OK },
+    { DI_BUTTON, 14, 4, 10, "Cancel", CM_CANCEL },
+};
+dialog_build("Rename", 28, 7, items, 4, CM_OK);
+input_set_text(&dlg_item[1].input, "old name");   /* après dialog_build() */
+if (dialog_run() == CM_OK) { /* buf contient la saisie */ }
+
+/* Boîte de message toute prête */
+if (msgbox("Quit", "Really quit?", MB_YESNO) == CM_YES) { /* ... */ }
+```
+
+À savoir :
+- un groupe contient au plus `TUI_MAX_CHILDREN` (12) widgets ;
+- les structures doivent vivre aussi longtemps que la fenêtre (`static`, pas de
+  variable locale) ;
+- les dialogues construits par table et `msgbox` partagent le même jeu de
+  widgets : un seul est ouvert à la fois ;
+- `demo/demo.c` montre le même principe avec une barre de menu et un dialogue.
+
 ## Semi-graphique (MouseText)
 
 `#define TUI_MOUSETEXT 1` (défaut, dans `tui_config.h` ou `-DTUI_MOUSETEXT=0`) :
