@@ -180,6 +180,70 @@ if (msgbox("Quit", "Really quit?", MB_YESNO) == CM_YES) { /* ... */ }
   widgets : un seul est ouvert à la fois ;
 - `demo/demo.c` montre le même principe avec une barre de menu et un dialogue.
 
+### Ajouter une barre de menu
+
+Un menu est un tableau d'articles (`TMenuItem` : texte, commande, raccourci),
+regroupés dans des `TMenu` que `menubar_init()` affiche sur la ligne 0.
+Choisir un article émet sa commande, traitée par le même gestionnaire que les
+boutons.
+
+```c
+#define CM_ABOUT (CM_USER + 0)
+#define CM_APPLY (CM_USER + 1)
+
+static const TMenuItem file_items[] = {
+    { "About...", CM_ABOUT, 0 },
+    { "-",        CM_NONE,  0 },               /* séparateur */
+    { "Quit",     CM_QUIT,  KEY_CTRL('Q') },   /* raccourci Ctrl-Q */
+};
+static const TMenuItem tools_items[] = {
+    { "Apply",    CM_APPLY, KEY_CTRL('A') },
+};
+static const TMenu menus[] = {
+    { "File",  file_items,  3 },
+    { "Tools", tools_items, 1 },
+};
+static TMenuBar menubar;
+
+static u8 on_command(TEvent *ev)
+{
+    switch (ev->cmd) {
+    case CM_ABOUT:
+        msgbox("About", "My application\nversion 1.0", MB_OK);
+        return EVENT_HANDLED;
+    case CM_APPLY:
+        /* même traitement que le bouton "Apply" de la fenêtre */
+        return EVENT_HANDLED;
+    }
+    return EVENT_NOT_HANDLED;
+}
+
+int main(void)
+{
+    app_init();
+    menubar_init(&menubar, menus, 2);
+    app_set_menubar(&menubar);
+    app_set_status(" Esc:menu  Tab:next  ^Q:quit");   /* barre d'état, ligne 23 */
+    /* ... fenêtre et widgets comme ci-dessus ... */
+    app_set_handler(on_command);
+    app_run();
+    app_done();
+    return 0;
+}
+```
+
+![Menu File ouvert au-dessus de la fenêtre d'exemple](menu-example.png)
+
+- **Ouverture :** Échap (ou un clic sur le titre). Ensuite ← → changent de menu,
+  ↑ ↓ d'article, Entrée valide, Échap referme ; taper l'initiale d'un article le
+  lance.
+- **Raccourcis :** `KEY_CTRL('x')`, actifs partout sauf dans un dialogue modal.
+  Ne pas utiliser `^H ^I ^J ^K ^M ^U` ni `^[` : ce sont les flèches, Tab, Entrée
+  et Échap.
+- **Séparateur :** un article dont le texte est `"-"`.
+- **Taille :** le code du menu (`menu.c`) n'est lié que si l'application appelle
+  `menubar_init()`.
+
 ## Semi-graphique (MouseText)
 
 `#define TUI_MOUSETEXT 1` (défaut, dans `tui_config.h` ou `-DTUI_MOUSETEXT=0`) :

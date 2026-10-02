@@ -184,6 +184,68 @@ Good to know:
   open at a time;
 - `demo/demo.c` shows the same principle with a menu bar and a dialog.
 
+### Adding a menu bar
+
+A menu is an array of items (`TMenuItem`: text, command, shortcut), grouped in
+`TMenu` entries that `menubar_init()` shows on row 0. Choosing an item emits its
+command, handled by the same handler as the buttons.
+
+```c
+#define CM_ABOUT (CM_USER + 0)
+#define CM_APPLY (CM_USER + 1)
+
+static const TMenuItem file_items[] = {
+    { "About...", CM_ABOUT, 0 },
+    { "-",        CM_NONE,  0 },               /* separator */
+    { "Quit",     CM_QUIT,  KEY_CTRL('Q') },   /* Ctrl-Q shortcut */
+};
+static const TMenuItem tools_items[] = {
+    { "Apply",    CM_APPLY, KEY_CTRL('A') },
+};
+static const TMenu menus[] = {
+    { "File",  file_items,  3 },
+    { "Tools", tools_items, 1 },
+};
+static TMenuBar menubar;
+
+static u8 on_command(TEvent *ev)
+{
+    switch (ev->cmd) {
+    case CM_ABOUT:
+        msgbox("About", "My application\nversion 1.0", MB_OK);
+        return EVENT_HANDLED;
+    case CM_APPLY:
+        /* same processing as the window's "Apply" button */
+        return EVENT_HANDLED;
+    }
+    return EVENT_NOT_HANDLED;
+}
+
+int main(void)
+{
+    app_init();
+    menubar_init(&menubar, menus, 2);
+    app_set_menubar(&menubar);
+    app_set_status(" Esc:menu  Tab:next  ^Q:quit");   /* status bar, row 23 */
+    /* ... window and widgets as above ... */
+    app_set_handler(on_command);
+    app_run();
+    app_done();
+    return 0;
+}
+```
+
+![File menu open over the example window](menu-example.png)
+
+- **Opening:** Esc (or a click on a title). Then ← → change menu, ↑ ↓ change
+  item, Enter accepts, Esc closes; typing an item's initial runs it.
+- **Shortcuts:** `KEY_CTRL('x')`, active everywhere except inside a modal
+  dialog. Do not use `^H ^I ^J ^K ^M ^U` or `^[`: they are the arrows, Tab,
+  Enter and Esc.
+- **Separator:** an item whose text is `"-"`.
+- **Size:** the menu code (`menu.c`) is only linked if the application calls
+  `menubar_init()`.
+
 ## Semigraphics (MouseText)
 
 `#define TUI_MOUSETEXT 1` (default, in `tui_config.h` or
